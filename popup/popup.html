@@ -3,14 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zoomme</title>
+  <title>ZoomMe</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="popup">
-    <h1>Zoomme</h1>
-    <p>Welcome to your extension.</p>
-    <button id="action-btn">Do something</button>
+    <h1>ZoomMe</h1>
+    <label class="toggle-row">
+      <span>Use ZoomMe</span>
+      <input id="toggle" type="checkbox">
+    </label>
+    <div id="indicator" class="indicator">Camera off</div>
   </div>
   <script src="popup.js"></script>
 </body>
