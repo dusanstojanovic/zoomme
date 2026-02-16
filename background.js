@@ -93,6 +93,10 @@ chrome.runtime.onConnect.addListener((port) => {
       chrome.storage.session.set({ cameraActive: true });
     } else if (msg.type === 'CAMERA_ERROR') {
       chrome.storage.session.set({ cameraActive: false, lastError: msg.error });
+      // Offscreen docs can't show permission prompts — open a helper tab
+      if (msg.error === 'NotAllowedError') {
+        chrome.tabs.create({ url: chrome.runtime.getURL('permissions.html') });
+      }
     } else if (msg.type === 'HEARTBEAT') {
       // No-op: receiving this message resets the service worker idle timer
     }
