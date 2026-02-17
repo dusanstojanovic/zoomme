@@ -16,5 +16,14 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["offscreen", "storage"]
+  "permissions": ["offscreen", "storage"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["wasm/*", "model/*", "vendor/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
