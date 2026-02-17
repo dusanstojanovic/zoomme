@@ -5,6 +5,83 @@ const OFFSCREEN_URL = chrome.runtime.getURL('offscreen/offscreen.html');
 
 let offscreenPort = null;
 
+// --- Zoom control ---
+
+const EMA_ALPHA = 0.4;
+const DEAD_ZONE_LOW = 0.95;
+const DEAD_ZONE_HIGH = 1.05;
+const ZOOM_MIN = 0.3;
+const ZOOM_MAX = 2.5;
+const ZOOM_DELTA_MIN = 0.01;
+
+let emaRatio = null;
+let lastZoom = null;
+let activeTabId = null;
+
+// Seed active tab on startup (only zoomable tabs)
+async function queryActiveTab() {
+  const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  const tab = tabs.find(t => t.url?.startsWith('http'));
+  return tab || null;
+}
+(async () => {
+  const tab = await queryActiveTab();
+  if (tab) activeTabId = tab.id;
+})();
+
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  const tab = await chrome.tabs.get(tabId);
+  if (tab.url?.startsWith('http')) {
+    activeTabId = tabId;
+    emaRatio = null;
+    lastZoom = null;
+  }
+});
+
+function updateEma(raw) {
+  if (emaRatio === null) { emaRatio = raw; return emaRatio; }
+  emaRatio = EMA_ALPHA * raw + (1 - EMA_ALPHA) * emaRatio;
+  return emaRatio;
+}
+
+function ratioToZoom(r) {
+  if (r >= DEAD_ZONE_LOW && r <= DEAD_ZONE_HIGH) return 1.0;
+  if (r > DEAD_ZONE_HIGH) {
+    const t = Math.min((r - DEAD_ZONE_HIGH) / (2.0 - DEAD_ZONE_HIGH), 1.0);
+    return 1.0 - t * (1.0 - ZOOM_MIN);
+  }
+  const t = Math.min((DEAD_ZONE_LOW - r) / (DEAD_ZONE_LOW - 0.3), 1.0);
+  return 1.0 + t * (ZOOM_MAX - 1.0);
+}
+
+async function applyZoom(rawRatio) {
+  if (activeTabId === null) {
+    const tab = await queryActiveTab();
+    if (!tab) return;
+    activeTabId = tab.id;
+  }
+
+  const zoom = ratioToZoom(updateEma(rawRatio));
+  if (lastZoom !== null && Math.abs(zoom - lastZoom) < ZOOM_DELTA_MIN) return;
+
+  try {
+    await chrome.tabs.setZoom(activeTabId, zoom);
+    lastZoom = zoom;
+  } catch (e) {
+    console.error('ZoomMe: setZoom failed', e.message);
+  }
+}
+
+async function resetZoom() {
+  if (activeTabId !== null) {
+    try {
+      await chrome.tabs.setZoom(activeTabId, 0);
+    } catch (e) { /* restricted page */ }
+  }
+  emaRatio = null;
+  lastZoom = null;
+}
+
 // --- Offscreen document lifecycle ---
 
 async function ensureOffscreenDocument() {
@@ -65,6 +142,7 @@ async function disableCamera() {
   if (offscreenPort) {
     offscreenPort.postMessage({ type: 'STOP_CAMERA' });
   }
+  await resetZoom();
   await chrome.storage.session.set({ enabled: false, cameraActive: false });
 
   // Close offscreen document if it still exists
@@ -98,11 +176,7 @@ chrome.runtime.onConnect.addListener((port) => {
         chrome.tabs.create({ url: chrome.runtime.getURL('permissions.html') });
       }
     } else if (msg.type === 'DISTANCE_READING') {
-      console.log('ZoomMe: distance reading', {
-        spread: msg.spread.toFixed(4),
-        baseline: msg.baseline.toFixed(4),
-        ratio: msg.ratio.toFixed(3)
-      });
+      applyZoom(msg.ratio);
     } else if (msg.type === 'HEARTBEAT') {
       // No-op: receiving this message resets the service worker idle timer
     }
