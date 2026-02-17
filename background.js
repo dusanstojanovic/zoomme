@@ -10,8 +10,20 @@ let offscreenPort = null;
 const EMA_ALPHA = 0.4;
 const DEAD_ZONE_LOW = 0.95;
 const DEAD_ZONE_HIGH = 1.05;
-const ZOOM_MIN = 0.3;
-const ZOOM_MAX = 2.5;
+const ZOOM_MIN = 0.3; // not user-configurable
+
+let settings = { zoomMax: 2.5, excludedSites: [] };
+
+chrome.storage.sync.get({ zoomMax: 2.5, excludedSites: [] }, (stored) => {
+  settings = stored;
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'sync') return;
+  if (changes.zoomMax)        settings.zoomMax        = changes.zoomMax.newValue;
+  if (changes.excludedSites)  settings.excludedSites  = changes.excludedSites.newValue;
+});
+
 const ZOOM_DELTA_MIN = 0.01;
 
 let emaRatio = null;
@@ -44,14 +56,14 @@ function updateEma(raw) {
   return emaRatio;
 }
 
-function ratioToZoom(r) {
+function ratioToZoom(r, zoomMax) {
   if (r >= DEAD_ZONE_LOW && r <= DEAD_ZONE_HIGH) return 1.0;
   if (r > DEAD_ZONE_HIGH) {
     const t = Math.min((r - DEAD_ZONE_HIGH) / (2.0 - DEAD_ZONE_HIGH), 1.0);
     return 1.0 - t * (1.0 - ZOOM_MIN);
   }
   const t = Math.min((DEAD_ZONE_LOW - r) / (DEAD_ZONE_LOW - 0.3), 1.0);
-  return 1.0 + t * (ZOOM_MAX - 1.0);
+  return 1.0 + t * (zoomMax - 1.0);
 }
 
 async function applyZoom(rawRatio) {
@@ -61,7 +73,17 @@ async function applyZoom(rawRatio) {
     activeTabId = tab.id;
   }
 
-  const zoom = ratioToZoom(updateEma(rawRatio));
+  try {
+    const tab = await chrome.tabs.get(activeTabId);
+    if (tab.url) {
+      const hostname = new URL(tab.url).hostname;
+      if (settings.excludedSites.includes(hostname)) return;
+    }
+  } catch (e) {
+    return; // tab closed or restricted
+  }
+
+  const zoom = ratioToZoom(updateEma(rawRatio), settings.zoomMax);
   if (lastZoom !== null && Math.abs(zoom - lastZoom) < ZOOM_DELTA_MIN) return;
 
   try {
