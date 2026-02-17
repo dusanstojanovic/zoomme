@@ -97,6 +97,12 @@ chrome.runtime.onConnect.addListener((port) => {
       if (msg.error === 'NotAllowedError') {
         chrome.tabs.create({ url: chrome.runtime.getURL('permissions.html') });
       }
+    } else if (msg.type === 'DISTANCE_READING') {
+      console.log('ZoomMe: distance reading', {
+        spread: msg.spread.toFixed(4),
+        baseline: msg.baseline.toFixed(4),
+        ratio: msg.ratio.toFixed(3)
+      });
     } else if (msg.type === 'HEARTBEAT') {
       // No-op: receiving this message resets the service worker idle timer
     }
