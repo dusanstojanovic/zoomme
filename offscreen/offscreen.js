@@ -10,6 +10,7 @@ let isStreaming = false;
 
 let faceLandmarker = null;
 let baseline = null;
+let baselineSamples = [];
 let detectionInterval = null;
 
 const video = document.getElementById('video');
@@ -31,7 +32,10 @@ async function initFaceLandmarker() {
 function extractSpread(result) {
   if (!result.faceLandmarks?.length) return null;
   const lm = result.faceLandmarks[0];
-  return Math.abs(lm[263].x - lm[33].x);
+  const dx = lm[263].x - lm[33].x;
+  const dy = lm[263].y - lm[33].y;
+  const dz = (lm[263].z || 0) - (lm[33].z || 0);
+  return Math.hypot(dx, dy, dz);
 }
 
 function startDetectionLoop() {
@@ -42,18 +46,27 @@ function startDetectionLoop() {
     if (spread === null) return;
 
     if (baseline === null) {
-      baseline = spread;
+      baselineSamples.push(spread);
+      if (baselineSamples.length < 5) return; // wait for 5 samples
+      baseline = baselineSamples.reduce((a, b) => a + b, 0) / baselineSamples.length;
       console.log('ZoomMe: baseline captured', baseline);
     }
     const ratio = spread / baseline;
     backgroundPort.postMessage({ type: 'DISTANCE_READING', spread, baseline, ratio });
-  }, 1000);
+  }, 200);
 }
 
 function stopDetectionLoop() {
   clearInterval(detectionInterval);
   detectionInterval = null;
   baseline = null;
+  baselineSamples = [];
+}
+
+function resetBaseline() {
+  baseline = null;
+  baselineSamples = [];
+  console.log('ZoomMe: baseline reset — will recapture from next 5 readings');
 }
 
 // --- Camera lifecycle ---
@@ -88,6 +101,8 @@ function connectToBackground() {
       startCamera();
     } else if (msg.type === 'STOP_CAMERA') {
       stopCamera();
+    } else if (msg.type === 'RESET_BASELINE') {
+      resetBaseline();
     }
   });
 }

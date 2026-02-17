@@ -1,8 +1,10 @@
 const toggle = document.getElementById('toggle');
 const indicator = document.getElementById('indicator');
+const calibrateBtn = document.getElementById('calibrate-btn');
 
 function applyState(state) {
   toggle.checked = !!state.enabled;
+  calibrateBtn.disabled = !state.cameraActive;
 
   if (state.lastError === 'NotAllowedError') {
     indicator.textContent = 'Camera permission denied';
@@ -34,6 +36,17 @@ toggle.addEventListener('change', () => {
     }
     // Allow camera startup time before refreshing
     setTimeout(refreshState, 500);
+  });
+});
+
+calibrateBtn.addEventListener('click', () => {
+  calibrateBtn.disabled = true;
+  calibrateBtn.textContent = 'Calibrating…';
+  chrome.runtime.sendMessage({ type: 'RECALIBRATE' }, () => {
+    setTimeout(() => {
+      calibrateBtn.textContent = 'Recalibrate distance';
+      calibrateBtn.disabled = false;
+    }, 5500); // 5 samples × 1s + buffer
   });
 });
 

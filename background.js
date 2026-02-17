@@ -7,9 +7,9 @@ let offscreenPort = null;
 
 // --- Zoom control ---
 
-const EMA_ALPHA = 0.4;
-const DEAD_ZONE_LOW = 0.95;
-const DEAD_ZONE_HIGH = 1.05;
+const EMA_ALPHA = 0.2;
+const DEAD_ZONE_LOW = 0.88;
+const DEAD_ZONE_HIGH = 1.12;
 const ZOOM_MIN = 0.3; // not user-configurable
 
 let settings = { zoomMax: 2.5, excludedSites: [] };
@@ -226,6 +226,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse({ ok: true });
     });
     return true; // async
+  }
+
+  if (msg.type === 'RECALIBRATE') {
+    emaRatio = null;
+    lastZoom = null;
+    if (offscreenPort) offscreenPort.postMessage({ type: 'RESET_BASELINE' });
+    sendResponse({ ok: true });
+    return true;
   }
 });
 
