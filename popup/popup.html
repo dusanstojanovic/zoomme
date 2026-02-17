@@ -14,6 +14,13 @@
       <input id="toggle" type="checkbox">
     </label>
     <div id="indicator" class="indicator">Camera off</div>
+    <div class="slider-row">
+      <span>Max zoom</span>
+      <input id="zoom-slider" type="range" min="1.2" max="3.0" step="0.1" value="2.5">
+      <span id="zoom-label">2.5x</span>
+    </div>
+    <button id="exclude-btn" disabled>Exclude this site</button>
+    <div id="excluded-list"></div>
   </div>
   <script src="popup.js"></script>
 </body>

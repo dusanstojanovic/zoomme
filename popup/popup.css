@@ -53,3 +53,52 @@ h1 {
   color: #2e7d32;
   font-weight: 500;
 }
+
+.slider-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+}
+
+#exclude-btn {
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+#exclude-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.excluded-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.excluded-row button {
+  padding: 2px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#excluded-list {
+  margin-top: 4px;
+  color: #444;
+  font-size: 13px;
+}
