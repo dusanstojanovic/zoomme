@@ -111,9 +111,9 @@ async function startCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
-        width: 640,
-        height: 480,
-        frameRate: { max: 30 }
+        width: 320,
+        height: 240,
+        frameRate: { ideal: 5, max: 10 }
       }
     });
     activeStream = stream;
