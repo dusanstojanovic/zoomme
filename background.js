@@ -7,9 +7,9 @@ let offscreenPort = null;
 
 // --- Zoom control ---
 
-const EMA_ALPHA = 0.2;
-const DEAD_ZONE_LOW = 0.88;
-const DEAD_ZONE_HIGH = 1.12;
+const EMA_ALPHA = 0.1;
+const DEAD_ZONE_LOW = 0.80;
+const DEAD_ZONE_HIGH = 1.20;
 const ZOOM_MIN = 0.3; // not user-configurable
 
 let settings = { zoomMax: 2.5, excludedSites: [] };
@@ -24,7 +24,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.excludedSites)  settings.excludedSites  = changes.excludedSites.newValue;
 });
 
-const ZOOM_DELTA_MIN = 0.01;
+const ZOOM_DELTA_MIN = 0.05;
 
 let emaRatio = null;
 let lastZoom = null;
@@ -50,9 +50,15 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   }
 });
 
+const SNAP_THRESHOLD = 0.15;
+
 function updateEma(raw) {
   if (emaRatio === null) { emaRatio = raw; return emaRatio; }
-  emaRatio = EMA_ALPHA * raw + (1 - EMA_ALPHA) * emaRatio;
+  if (Math.abs(raw - emaRatio) > SNAP_THRESHOLD) {
+    emaRatio = raw; // large movement — snap immediately
+  } else {
+    emaRatio = EMA_ALPHA * raw + (1 - EMA_ALPHA) * emaRatio;
+  }
   return emaRatio;
 }
 

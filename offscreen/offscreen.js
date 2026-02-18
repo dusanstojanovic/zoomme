@@ -53,7 +53,7 @@ function startDetectionLoop() {
     }
     const ratio = spread / baseline;
     backgroundPort.postMessage({ type: 'DISTANCE_READING', spread, baseline, ratio });
-  }, 200);
+  }, 1000);
 }
 
 function stopDetectionLoop() {
