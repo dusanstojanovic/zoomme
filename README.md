@@ -32,4 +32,4 @@ If zoom feels off, click **Recalibrate** in the popup to reset the baseline dist
 
 ## Battery & CPU
 
-When enabled, the extension runs a continuous webcam stream (640×480 @ 30fps) and MediaPipe WASM face detection once per second — expect **25–45% extra CPU** with spikes during each detection cycle. When disabled, impact is near zero (service worker is dormant). Disable the extension or use site exclusions when unneeded.
+When enabled, the extension runs a continuous webcam stream (320×240 @ 5fps) and MediaPipe WASM face detection once per second — expect **15–25% extra CPU** with spikes during each detection cycle. When disabled, impact is near zero (service worker is dormant). Disable the extension or use site exclusions when unneeded.
