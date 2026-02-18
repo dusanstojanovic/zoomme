@@ -29,3 +29,7 @@ Uses MediaPipe FaceLandmarker (runs locally via WASM) to measure the inter-eye d
 ## Recalibrate
 
 If zoom feels off, click **Recalibrate** in the popup to reset the baseline distance.
+
+## Battery & CPU
+
+When enabled, the extension runs a continuous webcam stream (640×480 @ 30fps) and MediaPipe WASM face detection once per second — expect **25–45% extra CPU** with spikes during each detection cycle. When disabled, impact is near zero (service worker is dormant). Disable the extension or use site exclusions when unneeded.
