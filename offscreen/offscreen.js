@@ -15,6 +15,11 @@ let detectionInterval = null;
 
 const video = document.getElementById('video');
 
+function log(msg) {
+  console.log(msg);
+  if (backgroundPort) backgroundPort.postMessage({ type: 'LOG', msg });
+}
+
 // --- MediaPipe detection ---
 
 async function initFaceLandmarker() {
@@ -26,7 +31,7 @@ async function initFaceLandmarker() {
     runningMode: 'VIDEO',
     numFaces: 1,
   });
-  console.log('ZoomMe: FaceLandmarker initialized');
+  log('ZoomMe: FaceLandmarker initialized');
 }
 
 function extractSpread(result) {
@@ -39,21 +44,29 @@ function extractSpread(result) {
 }
 
 function startDetectionLoop() {
+  log('ZoomMe: detection loop started');
   detectionInterval = setInterval(() => {
-    if (!faceLandmarker || video.readyState < 2) return;
+    if (!faceLandmarker || video.readyState < 2) {
+      log(`ZoomMe: skip — faceLandmarker=${!!faceLandmarker} readyState=${video.readyState}`);
+      return;
+    }
     const result = faceLandmarker.detectForVideo(video, performance.now());
     const spread = extractSpread(result);
-    if (spread === null) return;
+    if (spread === null) {
+      log('ZoomMe: no face detected');
+      return;
+    }
 
     if (baseline === null) {
       baselineSamples.push(spread);
-      if (baselineSamples.length < 5) return; // wait for 5 samples
+      log(`ZoomMe: baseline sample ${baselineSamples.length}/5 spread=${spread.toFixed(4)}`);
+      if (baselineSamples.length < 5) return;
       baseline = baselineSamples.reduce((a, b) => a + b, 0) / baselineSamples.length;
-      console.log('ZoomMe: baseline captured', baseline);
+      log(`ZoomMe: baseline captured ${baseline.toFixed(4)}`);
     }
     const ratio = spread / baseline;
     backgroundPort.postMessage({ type: 'DISTANCE_READING', spread, baseline, ratio });
-  }, 1000);
+  }, 500);
 }
 
 function stopDetectionLoop() {
@@ -66,7 +79,7 @@ function stopDetectionLoop() {
 function resetBaseline() {
   baseline = null;
   baselineSamples = [];
-  console.log('ZoomMe: baseline reset — will recapture from next 5 readings');
+  log('ZoomMe: baseline reset — will recapture from next 5 readings');
 }
 
 // --- Camera lifecycle ---
@@ -109,22 +122,25 @@ function connectToBackground() {
 
 async function startCamera() {
   try {
+    log('ZoomMe: requesting camera...');
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
-        width: 320,
-        height: 240,
-        frameRate: { ideal: 5, max: 10 }
+        width: 640,
+        height: 480,
+        frameRate: { ideal: 15, max: 30 }
       }
     });
+    const track = stream.getVideoTracks()[0];
+    log(`ZoomMe: camera acquired — ${JSON.stringify(track.getSettings())}`);
     activeStream = stream;
     video.srcObject = stream;
     await video.play();
     if (backgroundPort) {
       backgroundPort.postMessage({ type: 'CAMERA_READY' });
     }
-    initFaceLandmarker().then(() => startDetectionLoop());
+    initFaceLandmarker().then(() => startDetectionLoop()).catch(err => log(`ZoomMe: FaceLandmarker init failed: ${err}`));
   } catch (err) {
-    console.error('ZoomMe offscreen: camera error', err);
+    log(`ZoomMe offscreen: camera error ${err.name}: ${err.message}`);
     if (backgroundPort) {
       backgroundPort.postMessage({ type: 'CAMERA_ERROR', error: err.name });
     }

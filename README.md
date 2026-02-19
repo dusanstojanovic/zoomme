@@ -6,8 +6,8 @@ Chrome extension that automatically adjusts page zoom based on your distance fro
 
 Uses MediaPipe FaceLandmarker (runs locally via WASM) to measure the inter-eye distance in each webcam frame. The ratio against a captured baseline drives the zoom level.
 
-- Scans once per second
-- Dead zone (±20%) ignores small head movements
+- Scans twice per second (500ms interval)
+- Dead zone (±12%) ignores small head movements
 - Large movements snap instantly; small drift is smoothed via EMA
 - Excluded sites and max zoom configurable via popup
 
@@ -32,4 +32,4 @@ If zoom feels off, click **Recalibrate** in the popup to reset the baseline dist
 
 ## Battery & CPU
 
-When enabled, the extension runs a continuous webcam stream (320×240 @ 5fps) and MediaPipe WASM face detection once per second — expect **15–25% extra CPU** with spikes during each detection cycle. When disabled, impact is near zero (service worker is dormant). Disable the extension or use site exclusions when unneeded.
+When enabled, the extension runs a continuous webcam stream (640×480 @ 15fps) and MediaPipe WASM face detection twice per second — expect **20–30% extra CPU** with spikes during each detection cycle. When disabled, impact is near zero (service worker is dormant). Disable the extension or use site exclusions when unneeded.

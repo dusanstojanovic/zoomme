@@ -7,9 +7,9 @@ let offscreenPort = null;
 
 // --- Zoom control ---
 
-const EMA_ALPHA = 0.1;
-const DEAD_ZONE_LOW = 0.80;
-const DEAD_ZONE_HIGH = 1.20;
+const EMA_ALPHA = 0.15;
+const DEAD_ZONE_LOW = 0.88;
+const DEAD_ZONE_HIGH = 1.12;
 const ZOOM_MIN = 0.3; // not user-configurable
 
 let settings = { zoomMax: 2.5, excludedSites: [] };
@@ -24,7 +24,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.excludedSites)  settings.excludedSites  = changes.excludedSites.newValue;
 });
 
-const ZOOM_DELTA_MIN = 0.05;
+const ZOOM_DELTA_MIN = 0.02;
 
 let emaRatio = null;
 let lastZoom = null;
@@ -50,7 +50,7 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   }
 });
 
-const SNAP_THRESHOLD = 0.15;
+const SNAP_THRESHOLD = 0.10;
 
 function updateEma(raw) {
   if (emaRatio === null) { emaRatio = raw; return emaRatio; }
@@ -90,6 +90,7 @@ async function applyZoom(rawRatio) {
   }
 
   const zoom = ratioToZoom(updateEma(rawRatio), settings.zoomMax);
+  console.log(`ZoomMe: rawRatio=${rawRatio.toFixed(3)} ema=${emaRatio.toFixed(3)} zoom=${zoom.toFixed(3)} lastZoom=${lastZoom?.toFixed(3) ?? 'null'}`);
   if (lastZoom !== null && Math.abs(zoom - lastZoom) < ZOOM_DELTA_MIN) return;
 
   try {
@@ -196,15 +197,20 @@ chrome.runtime.onConnect.addListener((port) => {
 
   port.onMessage.addListener((msg) => {
     if (msg.type === 'CAMERA_READY') {
+      console.log('ZoomMe: camera ready');
       chrome.storage.session.set({ cameraActive: true });
     } else if (msg.type === 'CAMERA_ERROR') {
+      console.error('ZoomMe: camera error', msg.error);
       chrome.storage.session.set({ cameraActive: false, lastError: msg.error });
       // Offscreen docs can't show permission prompts — open a helper tab
       if (msg.error === 'NotAllowedError') {
         chrome.tabs.create({ url: chrome.runtime.getURL('permissions.html') });
       }
     } else if (msg.type === 'DISTANCE_READING') {
+      console.log('ZoomMe: DISTANCE_READING ratio=', msg.ratio?.toFixed(3));
       applyZoom(msg.ratio);
+    } else if (msg.type === 'LOG') {
+      console.log('[offscreen]', msg.msg);
     } else if (msg.type === 'HEARTBEAT') {
       // No-op: receiving this message resets the service worker idle timer
     }
